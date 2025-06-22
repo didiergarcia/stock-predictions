@@ -139,9 +139,15 @@ if __name__ == "__main__":
   blob_mae = bucket.blob(f"models/runs/{run_name}/mae.json")
   blob_mae.upload_from_string(json.dumps({"mae": mae}))
 
-  artifact = wandb.Artifact(f"{args.ticker}_model", type="model")
-  artifact.add_file(model_path)
-  wandb.log_artifact(artifact)
+  # Try to create wandb artifact, but handle permission errors gracefully
+  try:
+    artifact = wandb.Artifact(f"{args.ticker}_model", type="model")
+    artifact.add_file(model_path)
+    wandb.log_artifact(artifact)
+    print(f"Successfully logged model artifact to wandb")
+  except Exception as e:
+    print(f"Warning: Could not create wandb artifact due to: {e}")
+    print("Model saved to GCS successfully, continuing...")
 
   blob = bucket.blob(f"models/best/{args.ticker}/metadata.json")
   if blob.exists():
