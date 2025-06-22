@@ -1,0 +1,9 @@
+yfinance
+pandas
+scikit-learn
+prophet
+wandb
+matplotlib
+google-cloud-storage
+google-auth
+python-dotenv
