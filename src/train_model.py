@@ -9,6 +9,7 @@ import json
 from prophet import Prophet
 from sklearn.metrics import mean_absolute_error
 from google.cloud import storage
+import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 from google.oauth2 import service_account
 
@@ -112,8 +113,20 @@ if __name__ == "__main__":
 
   preds = predict(model, args.forecast_periods)
   mae = evaluate(preds, actuals)
+  plt.plot(actuals["ds"], actuals["y"], label="Actual")
+  plt.plot(preds["ds"], preds["yhat"], label="Predicted")
+  plt.title(f"{args.ticker} Forecast")
+  plt.legend()
+  wandb.log({"forecast_plot": wandb.Image(plt)})
+  plt.close()
   wandb.log({"mae": mae})
   print(f"Mean Absolute Error: {mae}")
+
+  # Save model locally
+  os.makedirs(f"models/{run_name}", exist_ok=True)
+  model_path = f"models/{run_name}/model.pkl"
+  with open(model_path, "wb") as f:
+    pickle.dump(model, f)
 
   # Save model and mae to GCS
   blob_model = bucket.blob(f"models/runs/{run_name}/model.pkl")
@@ -121,7 +134,9 @@ if __name__ == "__main__":
   blob_mae = bucket.blob(f"models/runs/{run_name}/mae.json")
   blob_mae.upload_from_string(json.dumps({"mae": mae}))
 
-
+  artifact = wandb.Artifact(f"{args.ticker}_model", type="model")
+  artifact.add_file(model_path)
+  wandb.log_artifact(artifact)
 
   blob = bucket.blob(f"models/best/{args.ticker}/metadata.json")
   if blob.exists():
@@ -136,6 +151,7 @@ if __name__ == "__main__":
     print(f"New best model found for {args.ticker} with MAE: {mae}")
     blob = bucket.blob(f"models/best/{args.ticker}/metadata.json")
     blob.upload_from_string(json.dumps({"mae": mae, "path": blob_model.name, "wandb_run_id": wandb.run.id, "wandb_run_name": wandb.run.name, "wandb_run_url": wandb.run.url}))
+    wandb.log({"gcp_path": blob_model.name})
     print(f"Uploaded new best model for {args.ticker} with MAE: {mae}")
   else:
     print(f"Current model for {args.ticker} with MAE: {mae} does not beat the best model with MAE: {best_mae}")
