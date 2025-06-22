@@ -2,3 +2,5 @@
 wandb
 .env
 models
+__pycache__
+

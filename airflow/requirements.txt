@@ -1,0 +1,5 @@
+yfinance
+prophet
+wandb
+google-cloud-storage
+python-dotenv
