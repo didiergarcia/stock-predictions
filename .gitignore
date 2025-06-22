@@ -1,4 +1,5 @@
 .venv-stock-predictions
+gc-auth.json
 wandb
 .env
 models

@@ -20,6 +20,11 @@ MODELS_DIR = os.getenv("MODELS_DIR")
 BEST_MODEL_DIR = os.getenv("BEST_MODEL_DIR")
 MODEL_RUNS_DIR = os.getenv("MODEL_RUNS_DIR")
 CREDENTIALS_PATH = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+# Debug: Print the credentials path
+print(f"CREDENTIALS_PATH: {CREDENTIALS_PATH}")
+print(f"File exists: {os.path.exists(CREDENTIALS_PATH) if CREDENTIALS_PATH else 'CREDENTIALS_PATH is None'}")
+
 credentials = service_account.Credentials.from_service_account_file(CREDENTIALS_PATH)
 client = storage.Client(project=PROJECT_ID, credentials=credentials)
 bucket = client.bucket(BUCKET_NAME)

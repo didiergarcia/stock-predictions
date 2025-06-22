@@ -5,12 +5,16 @@ x-airflow-common:
   build:
     context: ..
     dockerfile: airflow/Dockerfile
+  env_file:
+    - ../.env
   environment:
     AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
     AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    GOOGLE_APPLICATION_CREDENTIALS: /app/gc-auth.json
   volumes:
     - ../src:/app/src
     - ./dags:/opt/airflow/dags
+    - ../gc-auth.json:/app/gc-auth.json
     - airflow_db:/opt/airflow
 
 services:
