@@ -12,6 +12,14 @@ This project demonstrates how to orchestrate the training and evaluation of stoc
 - **Dockerized:** All components run in containers for reproducibility.
 
 ---
+#### Airflow Runs
+![Airflow Overview](./assets/stock-predictions-airflow-overfiew.png)
+#### Weights & Bias model runs
+![Weights and Bias model runs](./assets/stock-predictions-wandb-runs.png)
+#### GCS Model Bucket
+![GCS Models Bucket](./assets/stock-predictions-models-bucket.png)
+
+---
 
 ## Project Structure
 
@@ -26,6 +34,8 @@ This project demonstrates how to orchestrate the training and evaluation of stoc
 ├── src/
 │   └── train_model.py
 ├── requirements.txt
+├── .env
+├── gc-auth.json
 └── README.md
 ```
 
@@ -47,16 +57,22 @@ Create a `.env` file in the project root with the following variables:
 ```env
 GCS_BUCKET_NAME=your-bucket-name
 PROJECT_ID=your-gcp-project-id
-GOOGLE_APPLICATION_CREDENTIALS=/app/.gcp/your-service-account.json
+GOOGLE_APPLICATION_CREDENTIALS=/app/gc-auth.json
 WANDB_API_KEY=your-wandb-api-key
 MODELS_DIR=models
 BEST_MODEL_DIR=models/best
 MODEL_RUNS_DIR=models/runs
 ```
 
-Place your GCP service account JSON at the path specified above.
+### 3. GCP Credentials Setup
 
-### 3. Build and Start Airflow
+1. **Download your GCP service account JSON** and rename it to `gc-auth.json`
+2. **Place `gc-auth.json` in the project root** (same directory as `.env`)
+3. **Ensure the file has the correct permissions** (readable by the Docker container)
+
+### 4. Build and Start Airflow
+
+**Important:** Run docker compose from the `airflow/` directory:
 
 ```sh
 cd airflow
@@ -66,7 +82,7 @@ docker compose up --build
 - The Airflow UI will be available at [http://localhost:8080](http://localhost:8080).
 - The first time you run Airflow in standalone mode, it will print the admin credentials in the logs.
 
-### 4. Accessing Airflow
+### 5. Accessing Airflow UI
 
 Check the logs for the admin password:
 
@@ -86,13 +102,41 @@ Login with these credentials.
 
 ## Usage
 
-- The Airflow DAG (`stock_forecast_daily`) will run daily and train models for the tickers specified in the DAG.
+- The Airflow DAG (`stock_forecast_daily`) will run every 15 minutes by default for testing.
 - Model artifacts and metrics are logged to wandb and GCS.
 - You can customize tickers and DAG schedule in `airflow/dags/stock_prediction_dag.py`.
+
+**Default Configuration:**
+- **Tickers:** AAPL, MSFT, TSLA, TWLO
+- **Schedule:** Every 15 minutes (`*/15 * * * *`)
+- **Training Period:** 1 year of historical data
+- **Forecast Period:** 14 days
 
 ---
 
 ## Development
+
+### Python Environment Setup
+
+1. **Set Python Version with pyenv**
+   ```sh
+   pyenv install 3.11.8
+   pyenv local 3.11.8
+   ```
+
+2. **Create and Activate Virtual Environment**
+   ```sh
+   python -m venv venv
+   source venv/bin/activate  # On Unix/macOS
+   # OR
+   .\venv\Scripts\activate  # On Windows
+   ```
+
+3. **Verify Python Version**
+   ```sh
+   python --version  # Should output Python 3.11.8
+   ```
+
 
 - To run the training script locally:
   ```sh
@@ -104,9 +148,29 @@ Login with these credentials.
 
 ## Troubleshooting
 
-- **Airflow UI not accessible?** Make sure the containers are running and port 8080 is not blocked.
-- **No admin credentials?** Check the logs as described above.
-- **GCS or wandb errors?** Ensure your `.env` is correct and credentials are mounted in the container.
+### Common Issues
+
+- **"no configuration file provided: not found"**
+  - **Solution:** Make sure you're running `docker compose` from the `airflow/` directory, not the project root.
+
+- **"FileNotFoundError: No such file or directory: gc-auth.json"**
+  - **Solution:** Ensure `gc-auth.json` is in the project root and the path in `.env` is `/app/gc-auth.json`.
+
+- **"DAG.__init__() got an unexpected keyword argument 'schedule_interval'"**
+  - **Solution:** This is fixed in the current version. The DAG uses `schedule` instead of `schedule_interval` for Airflow 3.0+.
+
+- **"PermissionError: Permission denied" with wandb artifacts**
+  - **Solution:** The script now handles this gracefully. Models are still saved to GCS even if wandb artifacts fail.
+
+- **Environment variables not being passed to tasks**
+  - **Solution:** Check that your `.env` file is in the project root and the docker-compose.yaml references `../.env`.
+
+### Debugging
+
+The DAG includes a debug task that prints all environment variables. Check the `debug_env_vars` task logs to verify:
+- Environment variables are set correctly
+- File paths are accessible
+- Credentials are properly mounted
 
 ---
 

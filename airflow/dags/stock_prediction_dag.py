@@ -22,6 +22,7 @@ env_vars = {
 env_vars = {k: v for k, v in env_vars.items() if v is not None}
 
 # Debug function to print environment variables
+# DO NOT RUN THIS IN PRODUCTION
 def debug_env_vars(**context):
     print("=== Environment Variables in DAG ===")
     for key, value in env_vars.items():
